@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Vegas — кнопка контакта для салонов. Измеряйте истинную конверсию." />
+    <title>Vegas · Кнопка контакта</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <script>if(location.pathname.startsWith('/admin')){document.querySelector('link[rel=manifest]').href='/admin-manifest.json'}</script>
+    <meta name="theme-color" content="#060810" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vegas" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <meta property="og:title" content="Vegas · Кнопка контакта" />
+    <meta property="og:description" content="Кнопка контакта для салонов Vegas" />
+    <meta property="og:type" content="website" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+{
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /usr/share/caddy
+	encode gzip
+
+	@entry path / /index.html /sw.js /manifest.json /admin-manifest.json
+	header @entry Cache-Control "no-cache, no-store, must-revalidate"
+
+	@immutable {
+		path /assets/*
+		file
+	}
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	handle /assets/* {
+		file_server
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

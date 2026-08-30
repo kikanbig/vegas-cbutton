@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 45% 4%;
+    --foreground: 228 71% 97%;
+
+    --card: 227 46% 8%;
+    --card-foreground: 228 71% 97%;
+
+    --popover: 227 46% 8%;
+    --popover-foreground: 228 71% 97%;
+
+    --primary: 110 45% 50%;
+    --primary-foreground: 225 45% 6%;
+
+    --secondary: 228 47% 11%;
+    --secondary-foreground: 228 71% 97%;
+
+    --muted: 228 30% 14%;
+    --muted-foreground: 229 22% 59%;
+
+    --accent: 178 88% 34%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 228 25% 16%;
+    --input: 228 25% 16%;
+    --ring: 110 45% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 225 45% 4%;
+    --sidebar-foreground: 228 71% 97%;
+    --sidebar-primary: 110 45% 50%;
+    --sidebar-primary-foreground: 225 45% 6%;
+    --sidebar-accent: 228 47% 11%;
+    --sidebar-accent-foreground: 228 71% 97%;
+    --sidebar-border: 228 25% 16%;
+    --sidebar-ring: 110 45% 50%;
+  }
+
+  .dark {
+    --background: 225 45% 4%;
+    --foreground: 228 71% 97%;
+    --card: 227 46% 8%;
+    --card-foreground: 228 71% 97%;
+    --popover: 227 46% 8%;
+    --popover-foreground: 228 71% 97%;
+    --primary: 110 45% 50%;
+    --primary-foreground: 225 45% 6%;
+    --secondary: 228 47% 11%;
+    --secondary-foreground: 228 71% 97%;
+    --muted: 228 30% 14%;
+    --muted-foreground: 229 22% 59%;
+    --accent: 178 88% 34%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 228 25% 16%;
+    --input: 228 25% 16%;
+    --ring: 110 45% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image: radial-gradient(120% 70% at 50% -20%, #0d1226 0%, transparent 60%);
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-extrabold text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-sky-400;
+  }
+
+  .section-padding {
+    @apply py-20 md:py-28 px-4 md:px-8;
+  }
+
+  .card-glass {
+    @apply bg-card/80 rounded-2xl shadow-lg border border-white/[0.06] backdrop-blur-md;
+  }
+}

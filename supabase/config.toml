@@ -1,0 +1,23 @@
+project_id = "vdyokhdlbtwwsbljpjuh"
+
+[functions.send-magic-link]
+verify_jwt = false
+
+[functions.verify-custom-otp]
+verify_jwt = false
+
+[functions.admin-stats]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.admin-seller-stats]
+verify_jwt = false
+
+[functions.admin-export]
+verify_jwt = false
+
+[functions.admin-funnel-stats]
+verify_jwt = false
+
