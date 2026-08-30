@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import MetricsSection from "@/components/MetricsSection";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import stepEntrance from "@/assets/step-entrance.png";
@@ -92,6 +93,8 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        <MetricsSection />
 
         <section className="section-padding bg-card/40">
           <div className="container mx-auto max-w-4xl space-y-8">
