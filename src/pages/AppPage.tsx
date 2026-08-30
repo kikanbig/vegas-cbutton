@@ -181,7 +181,7 @@ const AppPage = () => {
   const sellerName = profile?.full_name || user?.email || "—";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-[#060810] flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex flex-col">
@@ -280,12 +280,16 @@ const AppPage = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
         <div
           className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96"
-          style={{ borderRadius: "50%", overflow: "hidden" }}
+          style={{
+            borderRadius: "50%",
+            overflow: "hidden",
+            boxShadow: "0 18px 50px rgba(10, 163, 158, 0.22)",
+          }}
         >
           <img
             src={buttonImage}
-            alt="Counter Button"
-            className="w-full h-full object-cover select-none pointer-events-none"
+            alt="Кнопка контакта Vegas"
+            className="w-full h-full object-contain select-none pointer-events-none"
             draggable={false}
           />
           {quadrantClips.map((clip, i) => (
@@ -317,8 +321,8 @@ const AppPage = () => {
             />
           )}
         </div>
-        <p className="mt-4 text-muted-foreground text-xs text-center">
-          Нажмите на сектор: ×1 · ×2 · ×3 · ×4
+        <p className="mt-5 text-muted-foreground text-xs text-center">
+          1 человек · пара · семья · 4+
         </p>
 
         {/* Shift toggle */}
