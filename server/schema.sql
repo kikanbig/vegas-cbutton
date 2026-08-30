@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   full_name TEXT,
   phone TEXT,
   company TEXT,
+  last_salon TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -40,7 +41,7 @@ CREATE TABLE IF NOT EXISTS client_consultations (
   button_press_id UUID NOT NULL UNIQUE REFERENCES button_presses(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   consultation_type TEXT NOT NULL CHECK (consultation_type IN ('express', 'deep')),
-  outcome TEXT NOT NULL CHECK (outcome IN ('proposal_sent', 'project_offered', 'refused')),
+  outcome TEXT NOT NULL CHECK (outcome IN ('proposal_sent', 'sale', 'refused')),
   refusal_reason TEXT CHECK (refusal_reason IN ('price', 'product', 'other')),
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -59,6 +60,7 @@ CREATE TABLE IF NOT EXISTS client_deals (
 CREATE TABLE IF NOT EXISTS seller_shifts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  salon TEXT,
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   ended_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

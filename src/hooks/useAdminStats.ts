@@ -13,6 +13,7 @@ export interface SellerStat {
   is_on_shift: boolean;
   is_on_break: boolean;
   break_started_at: string | null;
+  current_salon?: string | null;
 }
 
 export interface DailyStat {

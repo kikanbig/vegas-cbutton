@@ -9,7 +9,7 @@ interface PressRecord {
 }
 
 export type ConsultationType = "express" | "deep";
-export type ConsultationOutcome = "proposal_sent" | "project_offered" | "refused";
+export type ConsultationOutcome = "proposal_sent" | "sale" | "refused";
 export type RefusalReason = "price" | "product" | "other";
 
 export interface ConsultationRecord {

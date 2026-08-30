@@ -41,6 +41,7 @@ interface ExportData {
     seller_name: string;
     seller_email: string;
     company: string;
+    salon?: string;
     shift_start: string;
     shift_end: string | null;
     shift_seconds: number | null;
@@ -160,7 +161,7 @@ export default function AdminExportPanel() {
       XLSX.utils.book_append_sheet(wb, pressSheet, "Все нажатия");
 
       // Sheet 4: Shifts
-      const shiftHeader = ["Продавец", "Email", "Компания", "Начало смены", "Конец смены", "Длительность (ч:мм:сс)"];
+      const shiftHeader = ["Продавец", "Email", "Компания", "Салон", "Начало смены", "Конец смены", "Длительность (ч:мм:сс)"];
       const shiftRows = (data.shifts || []).map((s) => {
         const sec = s.shift_seconds;
         const duration = sec != null
@@ -170,13 +171,14 @@ export default function AdminExportPanel() {
           s.seller_name,
           s.seller_email,
           s.company,
+          s.salon || "",
           format(new Date(s.shift_start), "dd.MM.yyyy HH:mm:ss"),
           s.shift_end ? format(new Date(s.shift_end), "dd.MM.yyyy HH:mm:ss") : "В процессе",
           duration,
         ];
       });
       const shiftSheet = XLSX.utils.aoa_to_sheet([shiftHeader, ...shiftRows]);
-      shiftSheet["!cols"] = [{ wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 18 }];
+      shiftSheet["!cols"] = [{ wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 20 }, { wch: 18 }];
       XLSX.utils.book_append_sheet(wb, shiftSheet, "Смены");
 
       // Sheet 5: Breaks
@@ -205,7 +207,7 @@ export default function AdminExportPanel() {
         "Компания",
         "Клиенты",
         "Консультации",
-        "Проекты / встречи",
+        "Продажи",
         "КП",
         "Отказы",
         "Закрытия",

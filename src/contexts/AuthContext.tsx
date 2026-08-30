@@ -13,6 +13,7 @@ export interface Profile {
   full_name: string | null;
   company: string | null;
   phone: string | null;
+  last_salon?: string | null;
 }
 
 interface AuthContextType {

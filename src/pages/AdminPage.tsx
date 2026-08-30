@@ -114,7 +114,7 @@ const AdminPage = () => {
             label="На смене"
             value={data.sellers.filter(s => s.is_on_shift).length}
             accent
-            names={data.sellers.filter(s => s.is_on_shift).map(s => s.name)}
+            names={data.sellers.filter(s => s.is_on_shift).map(s => s.current_salon ? `${s.name} · ${s.current_salon}` : s.name)}
           />
           <KPICard
             icon={<Activity className="w-5 h-5" />}
@@ -132,7 +132,7 @@ const AdminPage = () => {
             label="На экспозиции"
             value={data.sellers.filter(s => s.is_on_shift && !s.is_on_break).length}
             variant="success"
-            names={data.sellers.filter(s => s.is_on_shift && !s.is_on_break).map(s => s.name)}
+            names={data.sellers.filter(s => s.is_on_shift && !s.is_on_break).map(s => s.current_salon ? `${s.name} · ${s.current_salon}` : s.name)}
           />
         </div>
 
@@ -269,6 +269,7 @@ const AdminPage = () => {
                 <TableRow>
                   <TableHead>Имя</TableHead>
                   <TableHead>Статус</TableHead>
+                  <TableHead>Салон</TableHead>
                   <TableHead>Компания</TableHead>
                   <TableHead className="text-right">Клиентов</TableHead>
                   <TableHead className="text-right">Людей</TableHead>
@@ -304,6 +305,7 @@ const AdminPage = () => {
                             : s.is_on_shift ? "На экспозиции" : "Не на смене"}
                         </span>
                       </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{s.is_on_shift ? (s.current_salon || "—") : "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{s.company}</TableCell>
                       <TableCell className="text-right">{s.total_clients}</TableCell>
                       <TableCell className="text-right font-semibold text-accent">{s.total_people}</TableCell>
@@ -315,7 +317,7 @@ const AdminPage = () => {
                   ))}
                 {data.sellers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Нет данных о продавцах
                     </TableCell>
                   </TableRow>

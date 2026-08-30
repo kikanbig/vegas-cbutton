@@ -11,6 +11,7 @@ import {
   signToken,
 } from "./auth.js";
 import { adminRouter } from "./admin.js";
+import { isValidSalon } from "./salons.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -144,7 +145,7 @@ app.post("/api/auth/verify-code", async (req, res) => {
 
 app.get("/api/me", authMiddleware, async (req, res) => {
   const userRes = await query(
-    `SELECT id, email, full_name, phone, company FROM users WHERE id = $1`,
+    `SELECT id, email, full_name, phone, company, last_salon FROM users WHERE id = $1`,
     [req.user.sub]
   );
   if (userRes.rowCount === 0) return res.status(401).json({ error: "Unauthorized" });
@@ -161,6 +162,7 @@ app.get("/api/me", authMiddleware, async (req, res) => {
       full_name: user.full_name,
       phone: user.phone,
       company: user.company,
+      last_salon: user.last_salon,
     },
     isAdmin: roleRes.rowCount > 0,
   });
@@ -240,7 +242,7 @@ app.post("/api/consultations", authMiddleware, async (req, res) => {
           item.button_press_id,
           req.user.sub,
           item.consultation_type,
-          item.outcome,
+          item.outcome === "project_offered" ? "sale" : item.outcome,
           item.refusal_reason || null,
           item.recorded_at || new Date().toISOString(),
         ]
@@ -254,15 +256,24 @@ app.post("/api/consultations", authMiddleware, async (req, res) => {
   res.json({ synced, failed: failed.length });
 });
 
-app.get("/api/shift", authMiddleware, async (req, res) => {
+async function shiftPayload(userId) {
+  const user = await query(`SELECT last_salon FROM users WHERE id = $1`, [userId]);
+  const lastSalon = user.rows[0]?.last_salon || null;
   const shift = await query(
-    `SELECT id FROM seller_shifts
+    `SELECT id, salon FROM seller_shifts
      WHERE user_id = $1 AND ended_at IS NULL
      ORDER BY started_at DESC LIMIT 1`,
-    [req.user.sub]
+    [userId]
   );
   if (shift.rowCount === 0) {
-    return res.json({ isShiftActive: false, activeShiftId: null, isOnBreak: false, activeBreakId: null });
+    return {
+      isShiftActive: false,
+      activeShiftId: null,
+      isOnBreak: false,
+      activeBreakId: null,
+      salon: null,
+      lastSalon,
+    };
   }
   const brk = await query(
     `SELECT id FROM seller_breaks
@@ -270,12 +281,18 @@ app.get("/api/shift", authMiddleware, async (req, res) => {
      LIMIT 1`,
     [shift.rows[0].id]
   );
-  res.json({
+  return {
     isShiftActive: true,
     activeShiftId: shift.rows[0].id,
     isOnBreak: brk.rowCount > 0,
     activeBreakId: brk.rows[0]?.id || null,
-  });
+    salon: shift.rows[0].salon || null,
+    lastSalon,
+  };
+}
+
+app.get("/api/shift", authMiddleware, async (req, res) => {
+  res.json(await shiftPayload(req.user.sub));
 });
 
 app.post("/api/shift/toggle", authMiddleware, async (req, res) => {
@@ -290,18 +307,35 @@ app.post("/api/shift/toggle", authMiddleware, async (req, res) => {
       [userId]
     );
     await query(`UPDATE seller_shifts SET ended_at = now() WHERE id = $1`, [open.rows[0].id]);
-    return res.json({ isShiftActive: false, activeShiftId: null, isOnBreak: false, activeBreakId: null });
+    return res.json(await shiftPayload(userId));
   }
-  const created = await query(
-    `INSERT INTO seller_shifts (user_id, started_at) VALUES ($1, now()) RETURNING id`,
-    [userId]
+
+  const user = await query(`SELECT last_salon FROM users WHERE id = $1`, [userId]);
+  const salon = isValidSalon(req.body?.salon) ? req.body.salon : user.rows[0]?.last_salon;
+  if (!isValidSalon(salon)) {
+    return res.status(400).json({ error: "Выберите салон, где вы сегодня работаете" });
+  }
+
+  await query(`UPDATE users SET last_salon = $2, updated_at = now() WHERE id = $1`, [userId, salon]);
+  await query(
+    `INSERT INTO seller_shifts (user_id, salon, started_at) VALUES ($1, $2, now())`,
+    [userId, salon]
   );
-  res.json({
-    isShiftActive: true,
-    activeShiftId: created.rows[0].id,
-    isOnBreak: false,
-    activeBreakId: null,
-  });
+  res.json(await shiftPayload(userId));
+});
+
+app.post("/api/shift/salon", authMiddleware, async (req, res) => {
+  const userId = req.user.sub;
+  const salon = req.body?.salon;
+  if (!isValidSalon(salon)) {
+    return res.status(400).json({ error: "Выберите салон из списка" });
+  }
+  await query(`UPDATE users SET last_salon = $2, updated_at = now() WHERE id = $1`, [userId, salon]);
+  await query(
+    `UPDATE seller_shifts SET salon = $2 WHERE user_id = $1 AND ended_at IS NULL`,
+    [userId, salon]
+  );
+  res.json(await shiftPayload(userId));
 });
 
 app.post("/api/shift/break", authMiddleware, async (req, res) => {
@@ -319,23 +353,13 @@ app.post("/api/shift/break", authMiddleware, async (req, res) => {
   );
   if (openBreak.rowCount > 0) {
     await query(`UPDATE seller_breaks SET ended_at = now() WHERE id = $1`, [openBreak.rows[0].id]);
-    return res.json({
-      isShiftActive: true,
-      activeShiftId: shift.rows[0].id,
-      isOnBreak: false,
-      activeBreakId: null,
-    });
+    return res.json(await shiftPayload(userId));
   }
-  const created = await query(
-    `INSERT INTO seller_breaks (shift_id, user_id, started_at) VALUES ($1, $2, now()) RETURNING id`,
+  await query(
+    `INSERT INTO seller_breaks (shift_id, user_id, started_at) VALUES ($1, $2, now())`,
     [shift.rows[0].id, userId]
   );
-  res.json({
-    isShiftActive: true,
-    activeShiftId: shift.rows[0].id,
-    isOnBreak: true,
-    activeBreakId: created.rows[0].id,
-  });
+  res.json(await shiftPayload(userId));
 });
 
 app.use("/api/admin", authMiddleware, adminRouter({ query, FUNNEL_FROM }));

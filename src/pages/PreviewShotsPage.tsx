@@ -8,7 +8,7 @@ import type { FunnelStats } from "@/hooks/useFunnelStats";
 const MOCK: FunnelStats = {
   totals: { clients: 184, consultations: 142, proposals: 58, projects: 31, refusals: 53, deals: 22 },
   byType: { express: 87, deep: 55 },
-  byOutcome: { proposal_sent: 58, project_offered: 31, refused: 53 },
+  byOutcome: { proposal_sent: 58, sale: 31, refused: 53 },
   byReason: { price: 28, product: 14, other: 11 },
   bySeller: [
     { user_id: "1", name: "Иванов А.", clients: 62, consultations: 51, proposals: 22, projects: 12, refusals: 17, deals: 9 },

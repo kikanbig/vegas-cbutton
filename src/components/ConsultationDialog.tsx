@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Zap, Search, FileText, CalendarCheck, XOctagon, BadgeDollarSign, PackageX, HelpCircle, ArrowLeft } from "lucide-react";
+import { Zap, Search, FileText, ShoppingBag, XOctagon, BadgeDollarSign, PackageX, HelpCircle, ArrowLeft } from "lucide-react";
 import {
   queueConsultation,
   type ConsultationType,
@@ -116,13 +116,12 @@ const ConsultationDialog = ({ open, buttonPressId, userId, peopleCount, onClose,
             <Button variant="ghost" size="sm" onClick={() => setStep("type")} className="self-start -mt-2">
               <ArrowLeft className="w-4 h-4 mr-1" /> Назад
             </Button>
-            {type === "deep" && (
-              <BigBtn
-                icon={<CalendarCheck />}
-                label="Предложен проект / встреча"
-                onClick={() => handleOutcome("project_offered")}
-              />
-            )}
+            <BigBtn
+              icon={<ShoppingBag />}
+              label="Продажа"
+              hint="гость купил"
+              onClick={() => handleOutcome("sale")}
+            />
             <BigBtn
               icon={<FileText />}
               label="Сформировано КП"

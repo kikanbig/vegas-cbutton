@@ -10,7 +10,8 @@ const TYPE_LABELS: Record<string, string> = {
 };
 const OUTCOME_LABELS: Record<string, string> = {
   proposal_sent: "Сформировано КП",
-  project_offered: "Проект / встреча",
+  sale: "Продажа",
+  project_offered: "Продажа",
   refused: "Отказ клиента",
 };
 const REASON_LABELS: Record<string, string> = {
@@ -70,7 +71,7 @@ const FunnelSection = () => {
               sub={`${pct(totals.consultations, totals.clients)}%`}
             />
             <FunnelStep
-              label="Проекты / встречи"
+              label="Продажи"
               value={totals.projects}
               sub={`${pct(totals.projects, totals.consultations)}%`}
             />
@@ -164,7 +165,7 @@ const FunnelSection = () => {
                 <TableHead>Имя</TableHead>
                 <TableHead className="text-right">Клиенты</TableHead>
                 <TableHead className="text-right">Консульт.</TableHead>
-                <TableHead className="text-right">Проекты</TableHead>
+                <TableHead className="text-right">Продажи</TableHead>
                 <TableHead className="text-right">КП</TableHead>
                 <TableHead className="text-right">Отказы</TableHead>
                 <TableHead className="text-right">Конв. К→Конс</TableHead>

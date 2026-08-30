@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { BRAND_NAME } from "@/lib/brand";
-import { LogOut, User, Users, UserCheck, WifiOff, Wifi, Clock, Coffee, ClipboardList } from "lucide-react";
+import { LogOut, User, Users, UserCheck, WifiOff, Wifi, Clock, Coffee, ClipboardList, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import buttonImage from "@/assets/button-quadrant.png";
@@ -15,7 +15,9 @@ import {
   type PendingClient,
 } from "@/lib/offlineSync";
 import { useSellerShift } from "@/hooks/useSellerShift";
+import { SALONS } from "@/lib/salons";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ConsultationDialog from "@/components/ConsultationDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -54,7 +56,7 @@ const quadrantClips = [
 
 const AppPage = () => {
   const { profile, user, signOut } = useAuth();
-  const { isShiftActive, isOnBreak, loading: shiftLoading, actionLoading, toggleShift, toggleBreak } = useSellerShift(user?.id);
+  const { isShiftActive, isOnBreak, salon, loading: shiftLoading, actionLoading, toggleShift, toggleBreak, setSalon } = useSellerShift(user?.id);
   const navigate = useNavigate();
   const [pressed, setPressed] = useState<number | null>(null);
   const [clients, setClients] = useState(0);
@@ -326,7 +328,25 @@ const AppPage = () => {
         </p>
 
         {/* Shift toggle */}
-        <div className="mt-6 flex flex-col items-center gap-3">
+        <div className="mt-6 flex w-full max-w-sm flex-col items-center gap-4">
+          <div className="w-full space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              Салон сегодня
+            </label>
+            <Select value={salon || undefined} onValueChange={setSalon} disabled={shiftLoading || actionLoading}>
+              <SelectTrigger className="bg-background/80">
+                <SelectValue placeholder="Выберите салон" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72" position="item-aligned">
+                {SALONS.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-3">
             <Clock className={`w-4 h-4 ${isShiftActive ? "text-green-500" : "text-muted-foreground"} ${actionLoading ? "animate-spin" : ""}`} />
             <Switch

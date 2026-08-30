@@ -18,9 +18,14 @@ const TYPE_LABELS = {
 };
 const OUTCOME_LABELS = {
   proposal_sent: "Сформировано КП",
-  project_offered: "Проект / встреча",
+  sale: "Продажа",
+  project_offered: "Продажа",
   refused: "Отказ клиента",
 };
+
+function isSale(outcome) {
+  return outcome === "sale" || outcome === "project_offered";
+}
 const REASON_LABELS = {
   price: "Не соответствует цена",
   product: "Не нравится товар",
@@ -77,12 +82,13 @@ export function adminRouter({ query, FUNNEL_FROM }) {
       `),
       query(`SELECT id, email, full_name, company FROM users`),
       query(`SELECT user_id FROM user_roles WHERE role = 'admin'`),
-      query(`SELECT user_id, id FROM seller_shifts WHERE ended_at IS NULL`),
+      query(`SELECT user_id, id, salon FROM seller_shifts WHERE ended_at IS NULL`),
       query(`SELECT user_id, started_at FROM seller_breaks WHERE ended_at IS NULL`),
     ]);
 
     const adminIds = new Set(roles.rows.map((r) => r.user_id));
     const onShift = new Set(shifts.rows.map((s) => s.user_id));
+    const salonByUser = Object.fromEntries(shifts.rows.map((s) => [s.user_id, s.salon || null]));
     const onBreak = new Set(breaks.rows.map((b) => b.user_id));
     const breakStart = Object.fromEntries(breaks.rows.map((b) => [b.user_id, b.started_at]));
     const totalClients = totals.rows[0].clients;
@@ -100,6 +106,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
         is_on_shift: onShift.has(s.user_id),
         is_on_break: onBreak.has(s.user_id),
         break_started_at: breakStart[s.user_id] || null,
+        current_salon: salonByUser[s.user_id] || null,
       })),
       daily: daily.rows,
       monthly: monthly.rows,
@@ -114,7 +121,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
            (SELECT COUNT(*) FROM button_presses WHERE pressed_at >= $1)::int AS clients,
            (SELECT COUNT(*) FROM client_consultations c JOIN button_presses b ON b.id = c.button_press_id WHERE b.pressed_at >= $1)::int AS consultations,
            (SELECT COUNT(*) FROM client_consultations c JOIN button_presses b ON b.id = c.button_press_id WHERE b.pressed_at >= $1 AND c.outcome = 'proposal_sent')::int AS proposals,
-           (SELECT COUNT(*) FROM client_consultations c JOIN button_presses b ON b.id = c.button_press_id WHERE b.pressed_at >= $1 AND c.outcome = 'project_offered')::int AS projects,
+           (SELECT COUNT(*) FROM client_consultations c JOIN button_presses b ON b.id = c.button_press_id WHERE b.pressed_at >= $1 AND c.outcome IN ('sale', 'project_offered'))::int AS projects,
            (SELECT COUNT(*) FROM client_consultations c JOIN button_presses b ON b.id = c.button_press_id WHERE b.pressed_at >= $1 AND c.outcome = 'refused')::int AS refusals,
            (SELECT COUNT(*) FROM client_deals d JOIN button_presses b ON b.id = d.button_press_id WHERE b.pressed_at >= $1)::int AS deals`,
         [from]
@@ -143,7 +150,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
                 COUNT(DISTINCT bp.id)::int AS clients,
                 COUNT(DISTINCT cc.id)::int AS consultations,
                 COUNT(DISTINCT cc.id) FILTER (WHERE cc.outcome = 'proposal_sent')::int AS proposals,
-                COUNT(DISTINCT cc.id) FILTER (WHERE cc.outcome = 'project_offered')::int AS projects,
+                COUNT(DISTINCT cc.id) FILTER (WHERE cc.outcome IN ('sale', 'project_offered'))::int AS projects,
                 COUNT(DISTINCT cc.id) FILTER (WHERE cc.outcome = 'refused')::int AS refusals,
                 COUNT(DISTINCT cd.id)::int AS deals
          FROM button_presses bp
@@ -343,7 +350,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
       const agg = ensure(uid);
       agg.consultations += 1;
       if (c.outcome === "proposal_sent") agg.proposals += 1;
-      if (c.outcome === "project_offered") agg.projects += 1;
+      if (isSale(c.outcome)) agg.projects += 1;
       if (c.outcome === "refused") agg.refusals += 1;
       byType[c.consultation_type] = (byType[c.consultation_type] ?? 0) + 1;
       byOutcome[c.outcome] = (byOutcome[c.outcome] ?? 0) + 1;
@@ -388,6 +395,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
           seller_name: profileMap[s.user_id]?.name || "—",
           seller_email: profileMap[s.user_id]?.email || "—",
           company: profileMap[s.user_id]?.company || "—",
+          salon: s.salon || "",
           shift_start: s.started_at,
           shift_end: s.ended_at,
           shift_seconds: end ? Math.round((end.getTime() - new Date(s.started_at).getTime()) / 1000) : null,
@@ -400,7 +408,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
           clients: funnelPresses.rows.length,
           consultations: consultations.rows.length,
           proposals: consultations.rows.filter((c) => c.outcome === "proposal_sent").length,
-          projects: consultations.rows.filter((c) => c.outcome === "project_offered").length,
+          projects: consultations.rows.filter((c) => isSale(c.outcome)).length,
           refusals: consultations.rows.filter((c) => c.outcome === "refused").length,
           deals: deals.rows.length,
         },
