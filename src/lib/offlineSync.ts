@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 interface PressRecord {
   id: string;
@@ -133,67 +133,27 @@ const syncPresses = async (): Promise<{ synced: number; failed: number }> => {
     pressed_at: r.pressed_at,
   }));
 
-  const { error } = await supabase
-    .from("button_presses")
-    .upsert(payload, { onConflict: "id", ignoreDuplicates: true });
-
-  if (!error) {
+  try {
+    await api("/presses", { method: "POST", body: JSON.stringify(payload) });
     saveQueue([]);
     return { synced: queue.length, failed: 0 };
+  } catch {
+    return { synced: 0, failed: queue.length };
   }
-
-  // Fallback row-by-row
-  let synced = 0;
-  const remaining: PressRecord[] = [];
-  for (const r of queue) {
-    const { error: e } = await supabase
-      .from("button_presses")
-      .upsert(
-        {
-          id: r.id,
-          user_id: r.user_id,
-          sector: r.sector,
-          people_count: r.people_count,
-          pressed_at: r.pressed_at,
-        },
-        { onConflict: "id", ignoreDuplicates: true }
-      );
-    if (!e) synced++; else remaining.push(r);
-  }
-  saveQueue(remaining);
-  return { synced, failed: remaining.length };
 };
 
 const syncConsultations = async (): Promise<{ synced: number; failed: number }> => {
   const queue = getConsultQueue();
   if (queue.length === 0) return { synced: 0, failed: 0 };
 
-  let synced = 0;
-  const remaining: ConsultationRecord[] = [];
-
-  for (const r of queue) {
-    const { error } = await supabase.from("client_consultations").upsert(
-      {
-        id: r.id,
-        button_press_id: r.button_press_id,
-        user_id: r.user_id,
-        consultation_type: r.consultation_type,
-        outcome: r.outcome,
-        refusal_reason: r.refusal_reason,
-        recorded_at: r.recorded_at,
-      },
-      { onConflict: "id", ignoreDuplicates: true }
-    );
-    if (!error) {
-      synced++;
-      // press is now safely on server, can drop from pending
-      removePendingClient(r.button_press_id);
-    } else {
-      remaining.push(r);
-    }
+  try {
+    await api("/consultations", { method: "POST", body: JSON.stringify(queue) });
+    saveConsultQueue([]);
+    for (const r of queue) removePendingClient(r.button_press_id);
+    return { synced: queue.length, failed: 0 };
+  } catch {
+    return { synced: 0, failed: queue.length };
   }
-  saveConsultQueue(remaining);
-  return { synced, failed: remaining.length };
 };
 
 export const syncQueue = async (): Promise<{ synced: number; failed: number }> => {
@@ -210,13 +170,12 @@ export const loadTodayCounts = async (userId: string): Promise<{ clients: number
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const { data, error } = await supabase
-    .from("button_presses")
-    .select("people_count")
-    .eq("user_id", userId)
-    .gte("pressed_at", todayStart.toISOString());
-
-  if (error || !data) return getSavedCounts();
+  let data: { people_count: number }[] = [];
+  try {
+    data = await api<{ people_count: number }[]>(`/presses?from=${encodeURIComponent(todayStart.toISOString())}`);
+  } catch {
+    return getSavedCounts();
+  }
 
   const clients = data.length;
   const people = data.reduce((sum, r) => sum + r.people_count, 0);

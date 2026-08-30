@@ -1,7 +1,7 @@
 import { ArrowLeft, Download, Share, MoreVertical, Plus, Smartphone, UserPlus, LogIn, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ALLOWED_EMAIL_DOMAIN, BRAND_NAME } from "@/lib/brand";
+import { BRAND_NAME } from "@/lib/brand";
 
 const InstallGuidePage = () => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const InstallGuidePage = () => {
               Откройте в браузере телефона этот сайт.
             </p>
             <p>
-              В правом верхнем углу нажмите <strong className="text-foreground">«Регистрация»</strong>, введите свой <strong className="text-foreground">email @{ALLOWED_EMAIL_DOMAIN}</strong> и имя.
+              В правом верхнем углу нажмите <strong className="text-foreground">«Регистрация»</strong>, введите свой рабочий email и имя.
             </p>
             <p>
               На почту придёт <strong className="text-foreground">8-значный код</strong> — введите его. Вы попадёте в приложение. Убедитесь, что регистрация прошла успешно.

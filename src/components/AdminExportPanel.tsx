@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -108,19 +108,13 @@ export default function AdminExportPanel() {
 
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Не авторизован");
-
-      const res = await supabase.functions.invoke("admin-export", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
+      const data = await api<ExportData>("/admin/export", {
+        method: "POST",
+        body: JSON.stringify({
           date_from: format(dateFrom, "yyyy-MM-dd"),
           date_to: format(dateTo, "yyyy-MM-dd"),
-        },
+        }),
       });
-
-      if (res.error) throw new Error(res.error.message);
-      const data = res.data as ExportData;
 
       // Build workbook
       const wb = XLSX.utils.book_new();

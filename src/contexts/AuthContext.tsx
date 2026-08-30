@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
-import type { User, Session } from "@supabase/supabase-js";
+import { api, getToken, setToken } from "@/lib/api";
 
-interface Profile {
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+export interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
@@ -12,12 +16,13 @@ interface Profile {
 }
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
   profile: Profile | null;
+  isAdmin: boolean;
   isLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  applySession: (payload: { token: string; user: AuthUser; profile: Profile; isAdmin: boolean }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,77 +34,63 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setProfile(data);
+  const refreshProfile = async () => {
+    const data = await api<{ user: AuthUser; profile: Profile; isAdmin: boolean }>("/me");
+    setUser(data.user);
+    setProfile(data.profile);
+    setIsAdmin(data.isAdmin);
   };
 
-  const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+  const applySession = (payload: { token: string; user: AuthUser; profile: Profile; isAdmin: boolean }) => {
+    setToken(payload.token);
+    setUser(payload.user);
+    setProfile(payload.profile);
+    setIsAdmin(payload.isAdmin);
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!isMounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
-          // Redirect to /app after magic link login
-          if (event === "SIGNED_IN" && (location.pathname === "/" || location.pathname === "/auth")) {
-            navigate("/app", { replace: true });
-          }
-        } else {
-          setProfile(null);
-        }
+    let cancelled = false;
+    const boot = async () => {
+      if (!getToken()) {
+        setIsLoading(false);
+        return;
       }
-    );
-
-    const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        await refreshProfile();
+        if (!cancelled && (location.pathname === "/" || location.pathname === "/auth")) {
+          navigate("/app", { replace: true });
         }
+      } catch {
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+        setIsAdmin(false);
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-
-    initializeAuth();
-
+    boot();
     return () => {
-      isMounted = false;
-      subscription.unsubscribe();
+      cancelled = true;
     };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setToken(null);
     setUser(null);
-    setSession(null);
     setProfile(null);
+    setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isLoading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, isLoading, signOut, refreshProfile, applySession }}>
       {children}
     </AuthContext.Provider>
   );

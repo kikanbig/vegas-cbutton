@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { BRAND_NAME } from "@/lib/brand";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,13 +42,7 @@ const AccountPage = () => {
   const loadStats = async (userId: string) => {
     setLoadingStats(true);
     try {
-      const { data, error } = await supabase
-        .from("button_presses")
-        .select("pressed_at, people_count")
-        .eq("user_id", userId)
-        .order("pressed_at", { ascending: false });
-
-      if (error) throw error;
+      const data = await api<{ pressed_at: string; people_count: number }[]>("/presses");
 
       // Group by month, then by day
       const monthsMap = new Map<string, Map<string, { clients: number; people: number }>>();
@@ -108,11 +102,10 @@ const AccountPage = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName, company, phone })
-        .eq("user_id", user.id);
-      if (error) throw error;
+      await api("/me", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: fullName, company, phone }),
+      });
       await refreshProfile();
       toast.success("Профиль обновлён");
     } catch (err: any) {

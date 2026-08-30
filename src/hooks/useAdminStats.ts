@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface SellerStat {
   user_id: string;
@@ -39,15 +39,7 @@ export interface AdminStats {
 }
 
 async function fetchAdminStats(): Promise<AdminStats> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Not authenticated");
-
-  const res = await supabase.functions.invoke("admin-stats", {
-    headers: { Authorization: `Bearer ${session.access_token}` },
-  });
-
-  if (res.error) throw new Error(res.error.message);
-  return res.data as AdminStats;
+  return api<AdminStats>("/admin/stats");
 }
 
 export function useAdminStats() {
