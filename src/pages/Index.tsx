@@ -125,7 +125,11 @@ const Index = () => {
               ))}
             </div>
             <div className="text-center">
-              <Button className="rounded-full px-8" variant="outline" onClick={() => navigate("/install")}>
+              <Button
+                size="lg"
+                className="vegas-glow rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => navigate("/install")}
+              >
                 Как установить на телефон
               </Button>
             </div>
