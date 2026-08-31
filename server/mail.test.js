@@ -74,7 +74,7 @@ describe("mail", () => {
     expect(sendMail).toHaveBeenCalledOnce();
     const payload = sendMail.mock.calls[0][0];
     expect(payload.to).toBe("anna@vegas.by");
-    expect(payload.subject).toContain("Код входа");
+    expect(payload.subject).toContain("Подтвердите почту");
     expect(payload.html).toContain("12345678");
     expect(payload.html).toContain("Анна");
     expect(payload.text).toContain("12345678");

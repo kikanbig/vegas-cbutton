@@ -22,23 +22,37 @@ describe("production smoke", () => {
     expect(data.emailConfigured).toBe(true);
   });
 
-  it("rejects a broken email and an unknown login", async () => {
-    const bad = await call("/api/auth/request-code", {
+  it("rejects a broken login and an unknown account", async () => {
+    const bad = await call("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: "not-an-email", mode: "login" }),
+      body: JSON.stringify({ email: "not-an-email", password: "12345678" }),
     });
     expect(bad.res.status).toBe(400);
 
-    const missing = await call("/api/auth/request-code", {
+    const missing = await call("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: "nobody-not-registered@vegas.by", mode: "login" }),
+      body: JSON.stringify({ email: "nobody-not-registered@vegas.by", password: "12345678" }),
     });
     expect(missing.res.status).toBe(400);
-    expect(missing.data.error).toMatch(/аккаунт/i);
+    expect(missing.data.error).toMatch(/email или пароль/i);
+    expect(missing.data.token).toBeUndefined();
   });
 
-  it("rejects a wrong OTP without leaking a session", async () => {
-    const { res, data } = await call("/api/auth/verify-code", {
+  it("rejects a short password on register", async () => {
+    const { res, data } = await call("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "nobody-not-registered@vegas.by",
+        fullName: "Тест",
+        password: "123",
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(data.error).toMatch(/пароль/i);
+  });
+
+  it("rejects a wrong confirmation code without leaking a session", async () => {
+    const { res, data } = await call("/api/auth/verify-email", {
       method: "POST",
       body: JSON.stringify({ email: "nobody-not-registered@vegas.by", code: "00000000" }),
     });

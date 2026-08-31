@@ -8,7 +8,10 @@ import {
   emailAllowed,
   generateOtp,
   hashCode,
+  hashPassword,
+  passwordError,
   signToken,
+  verifyPassword,
 } from "./auth.js";
 import { adminRouter } from "./admin.js";
 import { isValidSalon } from "./salons.js";
@@ -33,68 +36,174 @@ app.get("/api/config", (_req, res) => {
   });
 });
 
-app.post("/api/auth/request-code", async (req, res) => {
+function isValidEmail(email) {
+  return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254);
+}
+
+async function sessionPayload(user) {
+  const roleRes = await query(
+    `SELECT role FROM user_roles WHERE user_id = $1 AND role = 'admin' LIMIT 1`,
+    [user.id]
+  );
+  return {
+    token: signToken(user),
+    user: { id: user.id, email: user.email },
+    profile: {
+      id: user.id,
+      user_id: user.id,
+      full_name: user.full_name,
+      phone: user.phone,
+      company: user.company,
+      last_salon: user.last_salon || null,
+    },
+    isAdmin: roleRes.rowCount > 0,
+  };
+}
+
+async function maybeMakeFirstAdmin(userId) {
+  const admins = await query("SELECT 1 FROM user_roles WHERE role = 'admin' LIMIT 1");
+  if (admins.rowCount === 0) {
+    await query("INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin')", [userId]);
+  }
+}
+
+async function issueConfirmationCode(email, fullName) {
+  await query(`UPDATE otp_codes SET used = true WHERE email = $1 AND used = false`, [email]);
+  const code = generateOtp();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  await query(
+    `INSERT INTO otp_codes (email, code_hash, expires_at) VALUES ($1, $2, $3)`,
+    [email, hashCode(code), expiresAt.toISOString()]
+  );
+  const emailConfigured = isEmailConfigured();
+  if (emailConfigured) {
+    await sendOtpEmail(email, code, fullName);
+    return { emailConfigured };
+  }
+  console.log(`OTP for ${email}: ${code}`);
+  return { emailConfigured, devCode: code };
+}
+
+app.post("/api/auth/register", async (req, res) => {
   try {
     const email = String(req.body?.email || "").trim().toLowerCase();
-    const fullName = req.body?.fullName ? String(req.body.fullName).trim() : null;
+    const password = String(req.body?.password || "");
+    const fullName = req.body?.fullName ? String(req.body.fullName).trim() : "";
     const phone = req.body?.phone ? String(req.body.phone).trim() : null;
-    const mode = req.body?.mode === "register" ? "register" : "login";
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-      return res.status(400).json({ error: "Укажите корректный email" });
-    }
+    if (!isValidEmail(email)) return res.status(400).json({ error: "Укажите корректный email" });
     if (!emailAllowed(email)) {
       return res.status(403).json({ error: `Доступ только для домена @${allowedDomain()}` });
     }
+    if (!fullName) return res.status(400).json({ error: "Укажите имя" });
+    const pwdError = passwordError(password);
+    if (pwdError) return res.status(400).json({ error: pwdError });
 
-    const existing = await query("SELECT id FROM users WHERE email = $1", [email]);
-    if (mode === "register") {
-      if (!fullName) return res.status(400).json({ error: "Укажите имя" });
-      if (existing.rowCount === 0) {
-        const created = await query(
-          `INSERT INTO users (email, full_name, phone) VALUES ($1, $2, $3) RETURNING id`,
-          [email, fullName, phone]
-        );
-        const admins = await query("SELECT 1 FROM user_roles WHERE role = 'admin' LIMIT 1");
-        if (admins.rowCount === 0) {
-          await query("INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin')", [created.rows[0].id]);
-        }
+    const existing = await query(
+      `SELECT id, password_hash, email_verified FROM users WHERE email = $1`,
+      [email]
+    );
+    const passwordHash = await hashPassword(password);
+
+    if (existing.rowCount > 0) {
+      const user = existing.rows[0];
+      if (user.email_verified && user.password_hash) {
+        return res.status(400).json({ error: "Этот email уже зарегистрирован. Войдите." });
       }
-    } else if (existing.rowCount === 0) {
-      return res.status(400).json({ error: "Аккаунт не найден. Сначала зарегистрируйтесь." });
+      await query(
+        `UPDATE users
+         SET password_hash = $2, full_name = $3, phone = COALESCE($4, phone), updated_at = now()
+         WHERE id = $1`,
+        [user.id, passwordHash, fullName, phone]
+      );
+    } else {
+      const created = await query(
+        `INSERT INTO users (email, full_name, phone, password_hash, email_verified)
+         VALUES ($1, $2, $3, $4, false)
+         RETURNING id`,
+        [email, fullName, phone, passwordHash]
+      );
+      await maybeMakeFirstAdmin(created.rows[0].id);
     }
 
-    const code = generateOtp();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-    await query(
-      `INSERT INTO otp_codes (email, code_hash, expires_at) VALUES ($1, $2, $3)`,
-      [email, hashCode(code), expiresAt.toISOString()]
-    );
+    try {
+      const sent = await issueConfirmationCode(email, fullName);
+      res.json({ success: true, ...sent });
+    } catch (err) {
+      console.error("Email send failed:", err);
+      return res.status(500).json({ error: "Не удалось отправить письмо. Попробуйте позже." });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Не удалось зарегистрироваться" });
+  }
+});
 
-    const emailConfigured = isEmailConfigured();
-    if (emailConfigured) {
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    if (!isValidEmail(email) || !password) {
+      return res.status(400).json({ error: "Укажите email и пароль" });
+    }
+
+    const userRes = await query(
+      `SELECT id, email, full_name, phone, company, last_salon, password_hash, email_verified
+       FROM users WHERE email = $1`,
+      [email]
+    );
+    if (userRes.rowCount === 0) {
+      return res.status(400).json({ error: "Неверный email или пароль" });
+    }
+    const user = userRes.rows[0];
+    if (!user.password_hash) {
+      return res.status(400).json({
+        error: "Для этого аккаунта ещё нет пароля. Откройте регистрацию с тем же email и задайте пароль.",
+      });
+    }
+    if (!(await verifyPassword(password, user.password_hash))) {
+      return res.status(400).json({ error: "Неверный email или пароль" });
+    }
+    if (!user.email_verified) {
       try {
-        await sendOtpEmail(email, code, fullName);
+        await issueConfirmationCode(email, user.full_name);
       } catch (err) {
         console.error("Email send failed:", err);
-        return res.status(500).json({ error: "Не удалось отправить письмо. Попробуйте позже." });
       }
-    } else {
-      console.log(`OTP for ${email}: ${code}`);
+      return res.status(403).json({
+        error: "Подтвердите почту — мы отправили код ещё раз",
+        needsVerification: true,
+      });
     }
 
-    res.json({
-      success: true,
-      emailConfigured,
-      ...(emailConfigured ? {} : { devCode: code }),
-    });
+    res.json(await sessionPayload(user));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Не удалось войти" });
+  }
+});
+
+app.post("/api/auth/resend-code", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (!isValidEmail(email)) return res.status(400).json({ error: "Укажите корректный email" });
+    const userRes = await query(
+      `SELECT full_name, email_verified FROM users WHERE email = $1`,
+      [email]
+    );
+    if (userRes.rowCount === 0) return res.status(400).json({ error: "Аккаунт не найден" });
+    if (userRes.rows[0].email_verified) {
+      return res.status(400).json({ error: "Почта уже подтверждена. Войдите." });
+    }
+    const sent = await issueConfirmationCode(email, userRes.rows[0].full_name);
+    res.json({ success: true, ...sent });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Не удалось отправить код" });
   }
 });
 
-app.post("/api/auth/verify-code", async (req, res) => {
+app.post("/api/auth/verify-email", async (req, res) => {
   try {
     const email = String(req.body?.email || "").trim().toLowerCase();
     const code = String(req.body?.code || "").trim();
@@ -114,33 +223,18 @@ app.post("/api/auth/verify-code", async (req, res) => {
 
     await query("UPDATE otp_codes SET used = true WHERE id = $1", [found.rows[0].id]);
     const userRes = await query(
-      `SELECT id, email, full_name, phone, company FROM users WHERE email = $1`,
+      `UPDATE users SET email_verified = true, updated_at = now()
+       WHERE email = $1
+       RETURNING id, email, full_name, phone, company, last_salon`,
       [email]
     );
     if (userRes.rowCount === 0) {
       return res.status(400).json({ error: "Аккаунт не найден" });
     }
-    const user = userRes.rows[0];
-    const roleRes = await query(
-      `SELECT role FROM user_roles WHERE user_id = $1 AND role = 'admin' LIMIT 1`,
-      [user.id]
-    );
-    const token = signToken(user);
-    res.json({
-      token,
-      user: { id: user.id, email: user.email },
-      profile: {
-        id: user.id,
-        user_id: user.id,
-        full_name: user.full_name,
-        phone: user.phone,
-        company: user.company,
-      },
-      isAdmin: roleRes.rowCount > 0,
-    });
+    res.json(await sessionPayload(userRes.rows[0]));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Не удалось войти" });
+    res.status(500).json({ error: "Не удалось подтвердить почту" });
   }
 });
 

@@ -41,10 +41,10 @@ const InstallGuidePage = () => {
               Откройте в браузере телефона этот сайт.
             </p>
             <p>
-              В правом верхнем углу нажмите <strong className="text-foreground">«Регистрация»</strong>, введите свой рабочий email и имя.
+              В правом верхнем углу нажмите <strong className="text-foreground">«Регистрация»</strong>, введите имя, рабочий email и пароль.
             </p>
             <p>
-              На почту придёт <strong className="text-foreground">8-значный код</strong> — введите его. Вы попадёте в приложение. Убедитесь, что регистрация прошла успешно.
+              На почту придёт <strong className="text-foreground">8-значный код</strong> — введите его один раз, чтобы подтвердить почту. Дальше вход будет по email и паролю.
             </p>
             <p className="text-sm text-accent">
               ⚠️ Не закрывайте браузер — сейчас нужно установить приложение.
@@ -118,7 +118,7 @@ const InstallGuidePage = () => {
               Откройте <strong className="text-foreground">{BRAND_NAME}</strong> с рабочего стола — оно запустится в полноэкранном режиме.
             </p>
             <p>
-              Нажмите <strong className="text-foreground">«Войти»</strong>, введите свой email. На почту придёт <strong className="text-foreground">8-значный код</strong> — введите его.
+              Нажмите <strong className="text-foreground">«Войти»</strong>, введите email и пароль. Код на почту больше не нужен.
             </p>
             <p className="text-sm text-accent font-medium">
               ✅ Сессия сохранится на месяц — повторный вход не потребуется.
@@ -150,7 +150,7 @@ const InstallGuidePage = () => {
             </div>
             <div>
               <p className="font-semibold text-foreground">Код не приходит на почту?</p>
-              <p>Проверьте папку «Спам». Если кода нет — попросите руководителя проверить правильность email.</p>
+              <p>Код приходит только при регистрации. Проверьте папку «Спам». Если кода нет — нажмите «Отправить код ещё раз».</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Можно ли использовать на нескольких устройствах?</p>

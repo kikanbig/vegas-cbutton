@@ -24,6 +24,8 @@ export async function migrate() {
   const sql = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8");
   await query(sql);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_salon TEXT`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`);
   await query(`ALTER TABLE seller_shifts ADD COLUMN IF NOT EXISTS salon TEXT`);
   await query(`
     DO $$

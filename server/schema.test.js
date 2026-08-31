@@ -18,4 +18,9 @@ describe("schema.sql", () => {
     expect(sql).toMatch(/last_salon TEXT/);
     expect(sql).toMatch(/seller_shifts[\s\S]*salon TEXT/);
   });
+
+  it("stores a password hash and email confirmation flag", () => {
+    expect(sql).toMatch(/password_hash TEXT/);
+    expect(sql).toMatch(/email_verified BOOLEAN NOT NULL DEFAULT false/);
+  });
 });

@@ -14,17 +14,17 @@ function otpHtml(code, fullName) {
   return `
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111">
       <p>${greeting}</p>
-      <p>Код для входа в Vegas · Кнопка контакта:</p>
+      <p>Код подтверждения почты для Vegas · Кнопка контакта:</p>
       <p style="font-size:32px;font-weight:700;letter-spacing:6px;color:#5bba47">${code}</p>
-      <p style="color:#666">Код действителен 1 час. Если вы не запрашивали вход, просто проигнорируйте письмо.</p>
+      <p style="color:#666">Код действителен 1 час. Если вы не регистрировались, просто проигнорируйте письмо.</p>
     </div>
   `;
 }
 
 export async function sendOtpEmail(email, code, fullName) {
-  const subject = "Код входа — Vegas · Кнопка контакта";
+  const subject = "Подтвердите почту — Vegas · Кнопка контакта";
   const html = otpHtml(code, fullName);
-  const text = `${fullName ? `${fullName}, ` : ""}код для входа: ${code}. Действителен 1 час.`;
+  const text = `${fullName ? `${fullName}, ` : ""}код подтверждения: ${code}. Действителен 1 час.`;
 
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const transporter = nodemailer.createTransport({

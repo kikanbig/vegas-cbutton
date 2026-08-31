@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT,
   company TEXT,
   last_salon TEXT,
+  password_hash TEXT,
+  email_verified BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -5,7 +5,10 @@ import {
   emailAllowed,
   generateOtp,
   hashCode,
+  hashPassword,
+  passwordError,
   signToken,
+  verifyPassword,
   verifyToken,
 } from "./auth.js";
 
@@ -45,6 +48,21 @@ describe("emailAllowed", () => {
     expect(allowedDomain()).toBe("vegas.by");
     expect(emailAllowed("anna@vegas.by")).toBe(true);
     expect(emailAllowed("anna@gmail.com")).toBe(false);
+  });
+});
+
+describe("passwords", () => {
+  it("rejects short passwords", () => {
+    expect(passwordError("123")).toMatch(/8/);
+    expect(passwordError("12345678")).toBeNull();
+  });
+
+  it("hashes and verifies a password", async () => {
+    const stored = await hashPassword("Secret12");
+    expect(stored).toContain(":");
+    expect(await verifyPassword("Secret12", stored)).toBe(true);
+    expect(await verifyPassword("wrongpass", stored)).toBe(false);
+    expect(await verifyPassword("Secret12", null)).toBe(false);
   });
 });
 
