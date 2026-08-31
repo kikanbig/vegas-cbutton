@@ -16,6 +16,7 @@ import {
 import { adminRouter } from "./admin.js";
 import { isValidSalon } from "./salons.js";
 import { isEmailConfigured, sendOtpEmail } from "./mail.js";
+import { isAdminEmail } from "./admins.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -67,6 +68,18 @@ async function maybeMakeFirstAdmin(userId) {
   }
 }
 
+async function ensureAdmin(userId, email) {
+  if (isAdminEmail(email)) {
+    await query(
+      `INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin')
+       ON CONFLICT (user_id, role) DO NOTHING`,
+      [userId]
+    );
+    return;
+  }
+  await maybeMakeFirstAdmin(userId);
+}
+
 async function issueConfirmationCode(email, fullName) {
   await query(`UPDATE otp_codes SET used = true WHERE email = $1 AND used = false`, [email]);
   const code = generateOtp();
@@ -105,6 +118,7 @@ app.post("/api/auth/register", async (req, res) => {
     );
     const passwordHash = await hashPassword(password);
 
+    let userId;
     if (existing.rowCount > 0) {
       const user = existing.rows[0];
       if (user.email_verified && user.password_hash) {
@@ -116,6 +130,7 @@ app.post("/api/auth/register", async (req, res) => {
          WHERE id = $1`,
         [user.id, passwordHash, fullName, phone]
       );
+      userId = user.id;
     } else {
       const created = await query(
         `INSERT INTO users (email, full_name, phone, password_hash, email_verified)
@@ -123,8 +138,9 @@ app.post("/api/auth/register", async (req, res) => {
          RETURNING id`,
         [email, fullName, phone, passwordHash]
       );
-      await maybeMakeFirstAdmin(created.rows[0].id);
+      userId = created.rows[0].id;
     }
+    await ensureAdmin(userId, email);
 
     try {
       const sent = await issueConfirmationCode(email, fullName);

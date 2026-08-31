@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { ADMIN_EMAILS } from "./admins.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,5 +58,11 @@ export async function migrate() {
       END IF;
     END $$;
   `);
+  await query(
+    `INSERT INTO user_roles (user_id, role)
+     SELECT id, 'admin' FROM users WHERE lower(email) = ANY($1::text[])
+     ON CONFLICT (user_id, role) DO NOTHING`,
+    [ADMIN_EMAILS]
+  );
   console.log("Database schema is ready");
 }
