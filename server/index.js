@@ -12,6 +12,7 @@ import {
 } from "./auth.js";
 import { adminRouter } from "./admin.js";
 import { isValidSalon } from "./salons.js";
+import { isEmailConfigured, sendOtpEmail } from "./mail.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -28,7 +29,7 @@ app.get("/api/config", (_req, res) => {
   const domain = allowedDomain();
   res.json({
     allowedEmailDomain: domain || null,
-    emailConfigured: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM),
+    emailConfigured: isEmailConfigured(),
   });
 });
 
@@ -70,7 +71,7 @@ app.post("/api/auth/request-code", async (req, res) => {
       [email, hashCode(code), expiresAt.toISOString()]
     );
 
-    const emailConfigured = Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+    const emailConfigured = isEmailConfigured();
     if (emailConfigured) {
       try {
         await sendOtpEmail(email, code, fullName);
@@ -370,22 +371,6 @@ app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(path.join(dist, "index.html"));
 });
-
-async function sendOtpEmail(email, code, fullName) {
-  const { Resend } = await import("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
-    from: process.env.MAIL_FROM,
-    to: email,
-    subject: "Войдите в Vegas · Кнопка контакта",
-    html: `
-      <p>${fullName ? `Здравствуйте, ${fullName}!` : "Здравствуйте!"}</p>
-      <p>Код для входа:</p>
-      <p style="font-size:32px;font-weight:700;letter-spacing:6px">${code}</p>
-      <p>Код действителен 1 час.</p>
-    `,
-  });
-}
 
 migrate()
   .then(() => {
