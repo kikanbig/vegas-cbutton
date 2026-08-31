@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { BRAND_NAME } from "@/lib/brand";
+import BrandLogo from "@/components/BrandLogo";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,9 +127,9 @@ const AccountPage = () => {
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm">Назад</span>
           </button>
-          <p className="flex-1 text-center text-primary font-extrabold text-lg tracking-wide">
-            {BRAND_NAME}
-          </p>
+          <div className="flex-1 flex justify-center">
+            <BrandLogo imgClassName="h-8" />
+          </div>
           <div className="w-16" />
         </div>
       </header>

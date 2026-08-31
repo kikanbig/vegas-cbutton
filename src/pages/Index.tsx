@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import BrandLogo from "@/components/BrandLogo";
 import MetricsSection from "@/components/MetricsSection";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -41,7 +42,10 @@ const Index = () => {
         <section className="section-padding">
           <div className="container mx-auto max-w-6xl grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6 text-center md:text-left">
-              <p className="text-primary font-extrabold tracking-wide">Vegas · Кнопка контакта</p>
+              <div className="flex flex-col items-center md:items-start gap-2">
+                <BrandLogo imgClassName="h-10" />
+                <p className="text-sm text-muted-foreground">Кнопка контакта</p>
+              </div>
               <h1 className="text-4xl md:text-6xl font-black leading-tight">
                 Как мы считаем настоящие контакты в салоне
               </h1>

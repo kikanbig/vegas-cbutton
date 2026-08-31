@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { BRAND_NAME } from "@/lib/brand";
+import BrandLogo from "@/components/BrandLogo";
 import { LogOut, User, Shield } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,12 +22,7 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
       <div className="container mx-auto max-w-7xl flex items-center justify-between px-4 md:px-8 h-16">
-        <p
-          className="text-primary font-extrabold text-lg tracking-wide cursor-pointer"
-          onClick={() => navigate("/")}
-        >
-          {BRAND_NAME}
-        </p>
+        <BrandLogo onClick={() => navigate("/")} />
         <div className="flex items-center gap-3">
           {isLoading ? null : user ? (
             <DropdownMenu>

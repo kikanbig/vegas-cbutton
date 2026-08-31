@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { BRAND_NAME } from "@/lib/brand";
+import BrandLogo from "@/components/BrandLogo";
 import { LogOut, User, Users, UserCheck, WifiOff, Wifi, Clock, Coffee, ClipboardList, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -187,9 +187,7 @@ const AppPage = () => {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex flex-col">
-          <p className="text-primary font-extrabold text-lg tracking-wide">
-            {BRAND_NAME}
-          </p>
+          <BrandLogo imgClassName="h-8" />
           <p className="text-xs text-muted-foreground">{formatDate()}</p>
         </div>
         <div className="flex items-center gap-3">

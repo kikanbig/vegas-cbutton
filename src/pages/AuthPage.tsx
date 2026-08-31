@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Mail, ArrowLeft, Loader2, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { BRAND_NAME } from "@/lib/brand";
+import BrandLogo from "@/components/BrandLogo";
 import { api } from "@/lib/api";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
@@ -148,9 +148,7 @@ const AuthPage = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="card-glass p-8 md:p-12 max-w-md w-full space-y-8">
         <div className="text-center space-y-2">
-          <p className="text-primary font-extrabold text-lg tracking-wide cursor-pointer" onClick={() => navigate("/")}>
-            {BRAND_NAME}
-          </p>
+          <BrandLogo className="justify-center w-full" imgClassName="h-10" onClick={() => navigate("/")} />
           <h1 className="text-2xl font-bold">
             {mode === "login" ? "Войти в аккаунт" : "Создать аккаунт"}
           </h1>
