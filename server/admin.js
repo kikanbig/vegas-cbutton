@@ -1,7 +1,8 @@
 import { Router } from "express";
 
-function toLocalDate(isoString, offsetHours = 3) {
-  const d = new Date(isoString);
+export function toLocalDate(value, offsetHours = 3) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
   d.setUTCHours(d.getUTCHours() + offsetHours);
   return d.toISOString().slice(0, 10);
 }
@@ -287,6 +288,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
     }
     const dateToEnd = `${date_to}T23:59:59.999Z`;
 
+    try {
     const [allPresses, funnelPresses, users, breaks, shifts, consultations, deals] = await Promise.all([
       query(
         `SELECT id, user_id, sector, people_count, pressed_at
@@ -333,7 +335,7 @@ export function adminRouter({ query, FUNNEL_FROM }) {
       sellerAgg[p.user_id] ??= { clients: 0, people: 0, days: new Set() };
       sellerAgg[p.user_id].clients += 1;
       sellerAgg[p.user_id].people += p.people_count;
-      sellerAgg[p.user_id].days.add(p.pressed_at.slice(0, 10));
+      sellerAgg[p.user_id].days.add(toLocalDate(p.pressed_at));
     }
 
     const funnelSellerAgg = {};
@@ -442,6 +444,10 @@ export function adminRouter({ query, FUNNEL_FROM }) {
         };
       }),
     });
+    } catch (err) {
+      console.error("admin export failed", err);
+      res.status(500).json({ error: "Не удалось собрать выгрузку" });
+    }
   });
 
   return router;
