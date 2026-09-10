@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { ADMIN_EMAILS } from "./admins.js";
+import { postgresSsl } from "./pg-ssl.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +14,7 @@ if (!connectionString) {
 
 export const pool = new pg.Pool({
   connectionString,
-  ssl: connectionString?.includes("localhost") ? false : { rejectUnauthorized: false },
+  ssl: postgresSsl(connectionString),
   max: 10,
 });
 

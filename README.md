@@ -2,7 +2,9 @@
 
 Приложение для продавцов салонов Vegas: фиксация контакта с гостем, консультации, смены и админ-аналитика.
 
-Стек: React + Node.js API + PostgreSQL на Railway. Отдельный Supabase не нужен.
+Стек: React + Node.js API + PostgreSQL. Отдельный Supabase не нужен.
+
+Прод на своём VPS: см. [DEPLOY.md](DEPLOY.md). Репозиторий: https://github.com/kikanbig/vegas-cbutton
 
 ## Как это устроено
 

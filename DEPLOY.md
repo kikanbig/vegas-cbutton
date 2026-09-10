@@ -1,0 +1,223 @@
+# Развёртывание Vegas · Кнопка контакта на VPS
+
+Приложение для продавцов салонов Vegas: кнопка контакта, консультации, смены, админ-статистика.
+
+Один процесс Node отдаёт и сайт, и API. Рядом — PostgreSQL. Отдельный Supabase не нужен.
+
+**Репозиторий (private):** https://github.com/kikanbig/vegas-cbutton  
+**Прод-домен:** `https://button.vegaspro.by`
+
+Если нет доступа к репозиторию — напишите GitHub-логин владельцу репозитория (`kikanbig`), вас добавят Collaborator. Клонировать без доступа нельзя.
+
+---
+
+## Что должно получиться
+
+```
+браузер → nginx :443 (button.vegaspro.by)
+              ↓
+         Node :3001  (только 127.0.0.1, Docker)
+              ↓
+         Postgres :5432  (только внутри Docker-сети)
+```
+
+Схема базы создаётся **сама** при старте приложения (`migrate()`). Пустую базу руками наполнять не нужно.
+
+---
+
+## Требования к серверу
+
+| | Минимум | Лучше |
+|---|---|---|
+| ОС | Ubuntu 24.04 LTS | то же |
+| CPU | 1 vCPU | 2 vCPU |
+| RAM | 1 ГБ (+ swap 2 ГБ) | 2 ГБ |
+| Диск | 20 ГБ SSD | 40 ГБ SSD |
+| Сеть | публичный IPv4 | то же |
+
+Софт: Docker Engine + Docker Compose plugin, nginx, certbot.
+
+```sh
+# Ubuntu 24.04
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl nginx
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+# перелогиниться, затем:
+docker --version
+docker compose version
+```
+
+---
+
+## 1. Код
+
+```sh
+sudo mkdir -p /opt/vegas-cbutton
+sudo chown "$USER":"$USER" /opt/vegas-cbutton
+git clone https://github.com/kikanbig/vegas-cbutton.git /opt/vegas-cbutton
+cd /opt/vegas-cbutton
+```
+
+Ветка: `main`.
+
+---
+
+## 2. Секреты — файл `.env`
+
+```sh
+cp .env.example .env
+nano .env
+```
+
+Обязательно заполнить:
+
+| Переменная | Что поставить |
+|---|---|
+| `POSTGRES_PASSWORD` | Свой длинный пароль. Только латиница/цифры, без `@ : / # ?` — иначе сломается URL |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `SMTP_PASS` | Пароль ящика `cbutton@vegas.by` (hoster.by). Есть у Кирилла Канюшика |
+| `SMTP_USER` | `cbutton@vegas.by` |
+| `SMTP_HOST` | `smtp.hoster.by` |
+| `SMTP_PORT` | `465` |
+| `SMTP_SECURE` | `true` |
+| `MAIL_FROM` | `Vegas · Кнопка контакта <cbutton@vegas.by>` |
+| `ALLOWED_EMAIL_DOMAIN` | `vegas.by` |
+| `PORT` | `3001` |
+
+`DATABASE_URL` в `.env` **можно не писать**: `docker-compose.yml` сам соберёт его из `POSTGRES_PASSWORD` на хост `postgres`.
+
+Файл `.env` в git не попадает. Никому в чаты его не слать.
+
+---
+
+## 3. Запуск контейнеров
+
+```sh
+cd /opt/vegas-cbutton
+docker compose up -d --build
+docker compose ps
+docker compose logs -f app
+```
+
+Ожидаемые строки в логе `app`:
+
+```
+Database schema is ready
+Vegas button listening on 3001
+```
+
+Проверка с сервера:
+
+```sh
+curl -sS http://127.0.0.1:3001/api/health
+# {"ok":true}
+```
+
+Postgres наружу не публикуется. Приложение слушает только `127.0.0.1:3001`.
+
+Если сборка упала с OOM — добавьте swap 2 ГБ и повторите `docker compose up -d --build`.
+
+---
+
+## 4. DNS
+
+В зоне `vegaspro.by`:
+
+| Тип | Имя | Значение |
+|---|---|---|
+| A | `button` | публичный IPv4 этого VPS |
+
+CNAME на Railway больше не нужен. Проверка: `dig +short button.vegaspro.by` должен показать IP сервера.
+
+---
+
+## 5. nginx + HTTPS
+
+```sh
+sudo cp /opt/vegas-cbutton/deploy/nginx.conf.example /etc/nginx/sites-available/button.vegaspro.by
+sudo ln -sf /etc/nginx/sites-available/button.vegaspro.by /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d button.vegaspro.by
+```
+
+После этого сайт: `https://button.vegaspro.by`  
+Проверка API: `https://button.vegaspro.by/api/health` → `{"ok":true}`
+
+---
+
+## 6. Почта и вход
+
+Регистрация шлёт **один** 8-значный код на почту (подтверждение ящика). Дальше вход: email + пароль (минимум 8 символов).
+
+Исходящая почта: SMTP hoster.by, ящик `cbutton@vegas.by`, порт 465 SSL. С VPS должен быть открыт исходящий TCP 465.
+
+Админы (роль выдаётся при старте, если пользователь уже есть, и при регистрации):
+
+- `serpokrylova@vegas.by`
+- `trener@vegas.by`
+- `kanyushik@vegas.by`
+
+Админка: `https://button.vegaspro.by/admin`  
+Приложение продавца: `https://button.vegaspro.by/app`  
+Инструкция установки на телефон: `https://button.vegaspro.by/install`
+
+Пустая база нормальна: схема появится сама, данные — после регистраций продавцов.
+
+---
+
+## Обслуживание
+
+```sh
+cd /opt/vegas-cbutton
+
+# обновить код
+git pull
+docker compose up -d --build
+
+# логи
+docker compose logs -f --tail=200 app
+
+# перезапуск
+docker compose restart app
+
+# бэкап базы
+docker compose exec -T postgres pg_dump -U vegas vegas_cbutton | gzip > ~/vegas-cbutton-$(date +%F).sql.gz
+```
+
+Бэкап лучше повесить на cron раз в сутки. Том Postgres: Docker volume `vegas-cbutton_pgdata`.
+
+Откат: `git checkout <commit>` и снова `docker compose up -d --build`. Данные в volume не трогаются.
+
+---
+
+## Частые проблемы
+
+| Симптом | Что проверить |
+|---|---|
+| `DATABASE_URL is not set` / app рестартится | В `.env` есть `POSTGRES_PASSWORD`, перезапуск `docker compose up -d` |
+| 502 от nginx | `docker compose ps` — app healthy? `curl 127.0.0.1:3001/api/health` |
+| Письма не уходят | `SMTP_PASS`, исходящий 465, логи `docker compose logs app` |
+| Не пускает регистрацию | `ALLOWED_EMAIL_DOMAIN=vegas.by` — только почта `@vegas.by` |
+| Нет пункта «Админ-панель» | Пользователь не из списка админов или не перелогинился |
+| `docker compose build` убит (137) | Мало RAM, добавить swap |
+
+---
+
+## Чего делать не нужно
+
+- Отдельный контейнер «заранее» создавать и кому-то в него давать доступ
+- Ставить Supabase
+- Открывать Postgres в интернет
+- Публиковать порт 3001 на `0.0.0.0` — только `127.0.0.1`
+- Менять схему руками — приложение мигрирует само
+- Копировать данные с Railway, если это новый контур (если нужен перенос — отдельная задача)
+
+---
+
+## Контакты по продукту
+
+Владелец репозитория и секретов почты: Кирилл Канюшик.  
+По развёртыванию после этой инструкции писать не нужно, кроме: нет доступа к GitHub или нет пароля SMTP.
