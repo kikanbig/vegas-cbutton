@@ -172,10 +172,10 @@ sudo certbot --nginx -d button.vegaspro.by
 
 Разработка идёт в GitHub, ветка `main`. Новый код **сам на сервер не приедет** — это не Railway. Когда в репозитории появляется коммит, на VPS делают обновление.
 
-Одна команда:
+Одна команда (от пользователя, которому принадлежит `/opt/vegas-cbutton`):
 
 ```sh
-sudo -u "$(stat -c '%U' /opt/vegas-cbutton)" bash /opt/vegas-cbutton/deploy/update.sh
+cd /opt/vegas-cbutton && ./deploy/update.sh
 ```
 
 Или вручную:
