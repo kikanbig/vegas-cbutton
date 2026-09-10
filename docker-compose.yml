@@ -30,6 +30,11 @@ services:
       TZ: Europe/Minsk
     ports:
       - "127.0.0.1:3001:3001"
+    dns:
+      - 93.125.31.100
+      - 8.8.8.8
+    extra_hosts:
+      - "smtp.hoster.by:178.172.174.237"
     healthcheck:
       test:
         [

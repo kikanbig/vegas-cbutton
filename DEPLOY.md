@@ -262,11 +262,12 @@ docker compose exec app node -e "console.log('SMTP_HOST',process.env.SMTP_HOST);
 
 Типичные причины на корпоративном VPS:
 
-1. **Исходящий TCP 465 (и часто 587) закрыт** хостером «чтобы не слали спам». Нужно открыть исходящий 465/587 до `smtp.hoster.by`.
-2. **Неверный `SMTP_PASS`** в `.env` — после правки: `docker compose up -d`.
-3. В пароле есть `$` — Compose может его съесть. Обернуть пароль в одинарные кавычки: `SMTP_PASS='...$'`.
+1. **`getaddrinfo EAI_AGAIN smtp.hoster.by`** — контейнер не резолвит DNS, хотя сам сервер (`nslookup`) видит адрес. В `docker-compose.yml` уже прописаны DNS хостера и `extra_hosts`. После `git pull`: `docker compose up -d` (пересборка образа не нужна). Проверка: команда на 465 выше должна напечатать `465 ok`.
+2. **Исходящий TCP 465/587 закрыт** хостером. Открыть до `smtp.hoster.by`.
+3. **Неверный `SMTP_PASS`** в `.env` — после правки: `docker compose up -d`.
+4. В пароле есть `$` — Compose может его съесть. Обернуть: `SMTP_PASS='...$'`.
 
-На Railway та же почта уже работает. Если 465 fail — это сеть/файрвол VPS, не код приложения.
+Если IP `smtp.hoster.by` сменится, обновить `extra_hosts` в `docker-compose.yml` (`nslookup smtp.hoster.by` на хосте).
 
 ---
 
