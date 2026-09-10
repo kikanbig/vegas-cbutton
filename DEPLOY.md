@@ -168,19 +168,54 @@ sudo certbot --nginx -d button.vegaspro.by
 
 ---
 
+## Как накатывать доработки
+
+Разработка идёт в GitHub, ветка `main`. Новый код **сам на сервер не приедет** — это не Railway. Когда в репозитории появляется коммит, на VPS делают обновление.
+
+Одна команда:
+
+```sh
+sudo -u "$(stat -c '%U' /opt/vegas-cbutton)" bash /opt/vegas-cbutton/deploy/update.sh
+```
+
+Или вручную:
+
+```sh
+cd /opt/vegas-cbutton
+git pull --ff-only origin main
+docker compose up -d --build
+curl -sS http://127.0.0.1:3001/api/health
+```
+
+Что происходит:
+
+1. Скачивается свежий `main`.
+2. Образ приложения пересобирается (фронт + API).
+3. Контейнер `app` перезапускается. **Postgres и volume с данными не трогаются.**
+4. При старте приложение само накатывает изменения схемы (`migrate()`). SQL руками не гонять.
+
+Когда писать админу «нужно обновить»:
+
+| Что изменилось | Их действие |
+|---|---|
+| Правка кода, UI, логики | `deploy/update.sh` |
+| Новая таблица / поле | то же, миграция сама |
+| Новая переменная в `.env` | Кирилл пишет, какую строку добавить в `.env`, затем `docker compose up -d` (пересборки часто не нужно) |
+| Пароль SMTP / JWT | правят `.env`, `docker compose up -d` |
+
+Автодеплой (webhook при пуше в `main`) можно повесить позже. Для начала достаточно обновлять по сообщению «выкатил на main» или раз в день, если виден новый коммит: `git log -1 origin/main`.
+
+---
+
 ## Обслуживание
 
 ```sh
 cd /opt/vegas-cbutton
 
-# обновить код
-git pull
-docker compose up -d --build
-
 # логи
 docker compose logs -f --tail=200 app
 
-# перезапуск
+# перезапуск без обновления кода
 docker compose restart app
 
 # бэкап базы
