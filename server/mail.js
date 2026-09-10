@@ -36,13 +36,18 @@ export async function sendOtpEmail(email, code, fullName) {
         pass: process.env.SMTP_PASS,
       },
     });
-    await transporter.sendMail({
-      from: mailFrom(),
-      to: email,
-      subject,
-      text,
-      html,
-    });
+    try {
+      await transporter.sendMail({
+        from: mailFrom(),
+        to: email,
+        subject,
+        text,
+        html,
+      });
+    } catch (err) {
+      const hint = [err.code, err.command, err.response, err.message].filter(Boolean).join(" | ");
+      throw new Error(`SMTP: ${hint}`);
+    }
     return;
   }
 

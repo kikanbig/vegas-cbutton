@@ -234,10 +234,39 @@ docker compose exec -T postgres pg_dump -U vegas vegas_cbutton | gzip > ~/vegas-
 |---|---|
 | `DATABASE_URL is not set` / app рестартится | В `.env` есть `POSTGRES_PASSWORD`, перезапуск `docker compose up -d` |
 | 502 от nginx | `docker compose ps` — app healthy? `curl 127.0.0.1:3001/api/health` |
-| Письма не уходят | `SMTP_PASS`, исходящий 465, логи `docker compose logs app` |
+| «Не удалось отправить письмо» | Это не ошибка регистрирующегося. SMTP с VPS не достучался до hoster.by — см. ниже |
 | Не пускает регистрацию | `ALLOWED_EMAIL_DOMAIN=vegas.by` — только почта `@vegas.by` |
 | Нет пункта «Админ-панель» | Пользователь не из списка админов или не перелогинился |
 | `docker compose build` убит (137) | Мало RAM, добавить swap |
+
+---
+
+## Письма не уходят после деплоя
+
+Сообщение «Не удалось отправить письмо» значит: переменные SMTP заданы, но сервер **не смог отправить** через `smtp.hoster.by`. Регистрация на сайте тут ни при чём.
+
+```sh
+cd /opt/vegas-cbutton
+docker compose logs app --tail=100 | grep -i -E "Email send failed|SMTP"
+```
+
+Дальше с самого сервера (не с ноутбука):
+
+```sh
+# 1. Видит ли контейнер SMTP-порт hoster.by?
+docker compose exec app node -e "require('net').connect({host:'smtp.hoster.by',port:465,timeout:8000},()=>{console.log('465 ok');process.exit(0)}).on('error',e=>{console.error('465 fail',e.message);process.exit(1)})"
+
+# 2. Есть ли пароль в контейнере (длина, не сам пароль)
+docker compose exec app node -e "console.log('SMTP_HOST',process.env.SMTP_HOST); console.log('SMTP_USER',process.env.SMTP_USER); console.log('SMTP_PASS_LEN', (process.env.SMTP_PASS||'').length)"
+```
+
+Типичные причины на корпоративном VPS:
+
+1. **Исходящий TCP 465 (и часто 587) закрыт** хостером «чтобы не слали спам». Нужно открыть исходящий 465/587 до `smtp.hoster.by`.
+2. **Неверный `SMTP_PASS`** в `.env` — после правки: `docker compose up -d`.
+3. В пароле есть `$` — Compose может его съесть. Обернуть пароль в одинарные кавычки: `SMTP_PASS='...$'`.
+
+На Railway та же почта уже работает. Если 465 fail — это сеть/файрвол VPS, не код приложения.
 
 ---
 
